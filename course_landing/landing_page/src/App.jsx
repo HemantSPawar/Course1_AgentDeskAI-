@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import './App.css'
 
-const paymentLink = '#checkout-form'
+const paymentLink = import.meta.env.VITE_PAYMENT_FORM_URL || 'https://payments.cashfree.com/forms/agentdeskai'
 const successRedirectUrl = import.meta.env.VITE_SUCCESS_REDIRECT_URL || 'https://drive.google.com/drive/folders/1zcf0Cj9mbL1GPXC720gC6jxJgP6kWa2A?usp=sharing'
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
 
 const pageMarkup = `<nav class="navbar navbar-expand-lg sticky-top nav-shell">
     <div class="container container-max py-2">
@@ -317,124 +316,16 @@ const pageMarkup = `<nav class="navbar navbar-expand-lg sticky-top nav-shell">
   </div>`
 
 function App() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', amount: '0.1' })
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-
   useEffect(() => {
     const links = document.querySelectorAll('a[href="#checkout-form"]')
     links.forEach((link) => {
-      link.removeAttribute('target')
-      link.removeAttribute('rel')
+      link.setAttribute('href', paymentLink)
+      link.setAttribute('target', '_blank')
+      link.setAttribute('rel', 'noopener')
     })
-
-    if (window.location.hash === '#checkout-form') {
-      const checkout = document.getElementById('checkout-form')
-      checkout?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
   }, [])
 
-  async function handleCheckout(event) {
-    event.preventDefault()
-    setError('')
-    setIsLoading(true)
-    try {
-      const response = await fetch(`${apiBaseUrl}/api/create-payment-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim(),
-          amount: Number(form.amount || '0.1'),
-        }),
-      })
-      const raw = await response.text()
-      let data = null
-      try {
-        data = raw ? JSON.parse(raw) : null
-      } catch (_parseError) {
-        throw new Error(
-          'Payment API is not reachable. Start webhook server with "npm run webhook" in landing_page.'
-        )
-      }
-      if (!response.ok || !data?.link_url) {
-        throw new Error(data?.error || 'Unable to generate payment link')
-      }
-      window.location.href = data.link_url
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment link creation failed')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  return (
-    <>
-      <div dangerouslySetInnerHTML={{ __html: pageMarkup }} />
-      <section id="checkout-form" className="section-pad pt-0">
-        <div className="container container-max">
-          <div className="strong-card p-4 p-md-5">
-            <div className="mini-label mb-2">Dynamic Checkout</div>
-            <h2 className="h2 fw-bold mb-3">Generate payment link at runtime</h2>
-            <p className="text-muted-soft mb-4">
-              Customer details are captured dynamically and sent to Cashfree. Test amount is ?0.1.
-            </p>
-            <form onSubmit={handleCheckout} className="row g-3">
-              <div className="col-md-4">
-                <label className="form-label">Name</label>
-                <input
-                  className="form-control"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label">Email (optional)</label>
-                <input
-                  className="form-control"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label">Phone</label>
-                <input
-                  className="form-control"
-                  required
-                  pattern="[0-9]{10}"
-                  value={form.phone}
-                  onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
-                />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label">Amount (INR)</label>
-                <input
-                  className="form-control"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  value={form.amount}
-                  onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
-                />
-              </div>
-              <div className="col-12 d-flex flex-wrap gap-3 align-items-center">
-                <button className="btn btn-brand rounded-pill px-4 py-2 fw-bold" type="submit" disabled={isLoading}>
-                  {isLoading ? 'Creating link...' : 'Pay ?0.1 Now'}
-                </button>
-                <a href={successRedirectUrl} className="btn btn-outline-soft rounded-pill px-4 py-2" target="_blank" rel="noopener">
-                  Success Redirect (Drive)
-                </a>
-              </div>
-              {error ? <div className="col-12 text-warning small">{error}</div> : null}
-            </form>
-          </div>
-        </div>
-      </section>
-    </>
-  )
+  return <div dangerouslySetInnerHTML={{ __html: pageMarkup }} />
 }
 
 export default App
